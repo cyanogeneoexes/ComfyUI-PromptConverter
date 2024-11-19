@@ -4,7 +4,6 @@ from pathlib import Path
 import math
 import json
 import re
-from collections import OrderedDict
 
 class PromptConverter:
     def __init__(self):
