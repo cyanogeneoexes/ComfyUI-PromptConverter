@@ -1,0 +1,22 @@
+ {
+    "novelai3": [],
+    "ponyxl": [
+        {"name": "score_9", "weight": 1, "type": -2},
+        {"name": "score_8_up", "weight": 1, "type": -2},
+        {"name": "score_7_up", "weight": 1, "type": -2},
+        {"name": "best quality", "weight": 1, "type": -3},
+        {"name": "source_anime", "weight": 1, "type": 3}
+    ],
+    "animagine": [
+        {"name": "masterpiece", "weight": 1, "type": -3},
+        {"name": "best_quality", "weight": 1, "type": -3},
+        {"name": "very_aesthetic", "weight": 1, "type": -3},
+        {"name": "absurdres", "weight": 1, "type": -3}
+    ],
+    "illustrious": [
+        {"name": "masterpiece", "weight": 1, "type": -3},   
+        {"name": "best_quality", "weight": 1, "type": -3},
+        {"name": "very_aesthetic", "weight": 1, "type": -3},
+        {"name": "absurdres", "weight": 1, "type": -3}
+    ]
+}
