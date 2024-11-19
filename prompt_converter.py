@@ -300,9 +300,4 @@ class PromptConverter:
         return tuple(prompts)
 
 if __name__ == "__main__":
-    pc = PromptConverter()
-    raw = "1girl, nowaki \\(kancolle\\), kantai collection, (loli:1.7), (skinny:1.4), from behind, squatting, anus, pantyhose pull, panties pull, looking back, blush, tears, vest, pleated skirt, dress shirt, brown loafers, skirt lift, necktie, 1boy, male masturbation, motion lines, indoors, squat toilet, "
-    r1 = pc.process_text(raw, rating="explicit")
-    for x in r1:
-        print(x)
-
+    pass
