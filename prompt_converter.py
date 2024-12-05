@@ -205,6 +205,7 @@ class PromptConverter:
         # 1 画風
         # 3 ジャンル
         # 4 キャラクター
+        # 5 その他
         # 9 不明
         # -1 人物・人数
         # -2 スコア
@@ -212,10 +213,10 @@ class PromptConverter:
         # -4 レーティング
         # -5 年代
         sort_priority = {
-            "novelai3": [-1, 4, 3, 1, 0, 9, -3, -4, -5],
-            "ponyxl": [-2, -3, -1, 4, 3, 1, 0, 9, -4, -5],
-            "animagine": [-1, 4, 3, 0, 9, 1, -3, -4, -5],
-            "illustrious": [-1, 4, 3, -4, 0, 9, 1, -3, -5]
+            "novelai3": [-1, 4, 3, 1, 5, 0, 9, -3, -4, -5],
+            "ponyxl": [-2, -3, -1, 4, 3, 1, 5, 0, 9, -4, -5],
+            "animagine": [-1, 4, 3, 5, 0, 9, 1, -3, -4, -5],
+            "illustrious": [-1, 4, 3, -4, 5, 0, 9, 1, -3, -5]
         }[order]
 
         result2 = []
@@ -300,4 +301,5 @@ class PromptConverter:
         return tuple(prompts)
 
 if __name__ == "__main__":
-    pass
+    p = PromptConverter()
+    print(p.process_text("game_cg"))
