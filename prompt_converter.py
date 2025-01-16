@@ -328,8 +328,8 @@ class PromptConverterWithFilter(PromptConverter):
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING",)
-    RETURN_NAMES = ("novelai3", "ponyxl", "animagine", "illustrious")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "STRING",)
+    RETURN_NAMES = ("novelai3", "ponyxl", "animagine", "illustrious", "filtered")
     OUTPUT_NODE = True
     FUNCTION = "process_text_with_filter"
     ALWAYS_EXECUTE = True
@@ -343,6 +343,7 @@ class PromptConverterWithFilter(PromptConverter):
                                filter_quality=False, filter_rating=False,
                                filter_generation=False):
         original_sort_tags = self.sort_tags
+        filtered_tags_list = []  # フィルタリングされたタグを保存するリスト
         
         def filtered_sort_tags(taglist, order, tag_format):
             sorted_tags = original_sort_tags(taglist, order, tag_format)
@@ -361,6 +362,13 @@ class PromptConverterWithFilter(PromptConverter):
                 -5: filter_generation, # 年代
             }
             
+            # フィルタリングされたタグを収集
+            filtered_out = [
+                tag["name"] for tag in sorted_tags 
+                if filters.get(tag["type"], False)
+            ]
+            filtered_tags_list.extend(filtered_out)
+            
             # フィルタリング条件に一致するタグを除外
             filtered_tags = [
                 tag for tag in sorted_tags 
@@ -373,7 +381,10 @@ class PromptConverterWithFilter(PromptConverter):
         result = super().process_text(text, unique, auto_quality_tags, remove_weights, rating)
         self.sort_tags = original_sort_tags
         
-        return result
+        # フィルタリングされたタグを重複なしのカンマ区切りで返す
+        filtered_result = ", ".join(sorted(set(filtered_tags_list)))
+        
+        return (*result, filtered_result)
 
 if __name__ == "__main__":
     p = PromptConverter()
