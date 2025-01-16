@@ -9,6 +9,6 @@ Repository = "https://github.com/vkff5833/ComfyUI-PromptConverter"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "vkff5833"
 DisplayName = "ComfyUI-PromptConverter"
 Icon = ""
