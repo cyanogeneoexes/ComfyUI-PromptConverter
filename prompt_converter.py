@@ -300,6 +300,81 @@ class PromptConverter:
             prompts.append(prompt)
         return tuple(prompts)
 
+class PromptConverterWithFilter(PromptConverter):
+    """
+    タグタイプでフィルタリング機能を追加したPromptConverter
+    """
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "text": ("STRING", {"multiline": True, "default": "", "forceInput": True}),
+                "rating": (["safe", "sensitive", "questionable", "explicit"], {"default": "safe"}),
+                "unique": ("BOOLEAN", {"default": True}),
+                "auto_quality_tags": ("BOOLEAN", {"default": True}),
+                "remove_weights": ("BOOLEAN", {"default": False}),
+                "filter_general": ("BOOLEAN", {"default": False}),     # 一般タグを除外
+                "filter_style": ("BOOLEAN", {"default": False}),       # 画風タグを除外
+                "filter_genre": ("BOOLEAN", {"default": False}),       # ジャンルタグを除外
+                "filter_character": ("BOOLEAN", {"default": False}),   # キャラクタータグを除外
+                "filter_other": ("BOOLEAN", {"default": False}),       # その他タグを除外
+                "filter_unknown": ("BOOLEAN", {"default": False}),     # 不明タグを除外
+                "filter_person": ("BOOLEAN", {"default": False}),      # 人物・人数タグを除外
+                "filter_score": ("BOOLEAN", {"default": False}),       # スコアタグを除外
+                "filter_quality": ("BOOLEAN", {"default": False}),     # クオリティタグを除外
+                "filter_rating": ("BOOLEAN", {"default": False}),      # レーティングタグを除外
+                "filter_generation": ("BOOLEAN", {"default": False}),  # 年代タグを除外
+            },
+        }
+
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING",)
+    RETURN_NAMES = ("novelai3", "ponyxl", "animagine", "illustrious")
+    OUTPUT_NODE = True
+    FUNCTION = "process_text_with_filter"
+    ALWAYS_EXECUTE = True
+
+    def process_text_with_filter(self, text="", unique=True, auto_quality_tags=True, 
+                               remove_weights=False, rating="safe", 
+                               filter_general=False, filter_style=False,
+                               filter_genre=False, filter_character=False,
+                               filter_other=False, filter_unknown=False,
+                               filter_person=False, filter_score=False,
+                               filter_quality=False, filter_rating=False,
+                               filter_generation=False):
+        original_sort_tags = self.sort_tags
+        
+        def filtered_sort_tags(taglist, order, tag_format):
+            sorted_tags = original_sort_tags(taglist, order, tag_format)
+            # フィルター条件を辞書で管理
+            filters = {
+                0: filter_general,     # 一般
+                1: filter_style,       # 画風
+                3: filter_genre,       # ジャンル
+                4: filter_character,   # キャラクター
+                5: filter_other,       # その他
+                9: filter_unknown,     # 不明
+                -1: filter_person,     # 人物・人数
+                -2: filter_score,      # スコア
+                -3: filter_quality,    # クオリティ
+                -4: filter_rating,     # レーティング
+                -5: filter_generation, # 年代
+            }
+            
+            # フィルタリング条件に一致するタグを除外
+            filtered_tags = [
+                tag for tag in sorted_tags 
+                if not filters.get(tag["type"], False)
+            ]
+            
+            return filtered_tags
+        
+        self.sort_tags = filtered_sort_tags
+        result = super().process_text(text, unique, auto_quality_tags, remove_weights, rating)
+        self.sort_tags = original_sort_tags
+        
+        return result
+
 if __name__ == "__main__":
     p = PromptConverter()
     print(p.process_text("game_cg"))
