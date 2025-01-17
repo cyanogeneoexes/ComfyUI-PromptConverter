@@ -12,20 +12,30 @@ app.registerExtension({
             defaultValue: false,
             tooltip: "サンプル設定の説明文"
         });
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey) {
-                // グラフ内の全ノードを取得
+
+        // Ctrlが押されているかどうかを追跡
+        let isCtrlPressed = false;
+
+        document.addEventListener('keydown', async (e) => {
+            // Ctrlキーが押された時の処理
+            if (e.key === 'Control' && !isCtrlPressed && searchUploadSetting.value) {
+                isCtrlPressed = true;
                 const nodes = app.graph._nodes;
-                // 特定のタイトルを持つノードを探す
                 const targetNodes = nodes.filter(node => node.type === "LoadImage");
                 
                 if (targetNodes.length > 0) {
-                    console.log("Found Load Image nodes:", targetNodes);
-                    // 必要に応じて見つかったノードを選択状態にする
                     app.canvas.selectNodes(targetNodes);
                 }
             }
         });
+
+        // Ctrlキーが離された時のフラグリセット
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Control') {
+                isCtrlPressed = false;
+            }
+        });
     }
-}); 
+});
+
 
