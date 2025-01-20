@@ -398,7 +398,7 @@ app.registerExtension({
                 try {
                     let tags = selectedText.split(",");
                     if (tags.length > 0) {
-                        tags = tags.map(tag => tag.trim().replace(/ /g, "_"));
+                        tags = tags.map(tag => tag.trim().replace(/ /g, "_").replace(/\\/g, ""));
                         tags = tags.splice(0, 2);
                         const relatedTags = await searchRelatedTags(tags);
                         
