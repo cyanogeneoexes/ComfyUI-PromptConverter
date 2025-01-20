@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-promptconverter"
 description = "A ComfyUI custom node that converts prompts between different AI image generation models."
-version = "1.1.1"
+version = "1.1.2"
 license = {file = "LICENSE"}
 
 [project.urls]

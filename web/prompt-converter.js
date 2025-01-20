@@ -26,10 +26,9 @@ function getTagColor(category) {
     const colors = {
         0: { color: '#0075f8', hoverColor: '#8caaff' }, // General
         1: { color: '#c00004', hoverColor: '#ff5a5b' }, // Artist
-        3: { color: '#35c64a', hoverColor: '#93e49a' }, // Character
-        4: { color: '#fd9200', hoverColor: '#ffc5a5' }, // Meta
-        2: { color: '#d700d9', hoverColor: '#fd78ff' }, // Copyright
-        5: { color: '#ff5a5b', hoverColor: '#ff8a8b' }  // Rating
+        3: { color: '#d700d9', hoverColor: '#fd78ff' }, // Copyright
+        4: { color: '#35c64a', hoverColor: '#93e49a' }, // Character
+        5: { color: '#fd9200', hoverColor: '#ffc5a5' }  // Meta
     };
     return colors[category] || colors[0];
 }
@@ -161,10 +160,9 @@ function createTagSuggestionPopup(tags, position) {
         createFilterButton(null, 'ALL'),
         createFilterButton(0, 'GEN'),
         createFilterButton(1, 'ART'),
-        createFilterButton(2, 'CPY'),
-        createFilterButton(3, 'CHR'),
-        createFilterButton(4, 'META'),
-        createFilterButton(5, 'RTG'),
+        createFilterButton(3, 'CPY'),
+        createFilterButton(4, 'CHR'),
+        createFilterButton(5, 'META')
     ];
 
     filterButtons.forEach(({ button }) => {
@@ -317,10 +315,9 @@ function createTagSuggestionPopup(tags, position) {
         const categories = {
             0: "General",
             1: "Artist",
-            2: "Copyright",
-            3: "Character",
-            4: "Meta",
-            5: "Rating"
+            3: "Copyright",
+            4: "Character",
+            5: "Meta"
         };
         return categories[category] || "";
     }
