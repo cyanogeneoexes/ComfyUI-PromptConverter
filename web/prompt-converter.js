@@ -1,18 +1,5 @@
 import { app } from "../../scripts/app.js";
 
-/* ノード選択サンプル
-const nodes = app.graph._nodes;
-const targetNode = nodes.find(node => node.type === "LoadImage");
-*/
-
-/* タグ検索サンプル
-const url = "https://danbooru.donmai.us/related_tag?commit=Search&search%5Bcategory%5D=General&search%5Border%5D=Cosine&search%5Bquery%5D=kantai_collection";
-const response = await fetch(url);
-const data = await response.json();
-console.log(data);
-*/
-
-// タグ検索用の非同期関数
 async function searchRelatedTags(tag) {
     try {
         const query = tag.join(" ");
@@ -47,6 +34,36 @@ function getTagColor(category) {
     return colors[category] || colors[0];
 }
 
+// タグ文字列を整形して配列に変換する関数
+function parsePromptToTags(promptStr) {
+    if (!promptStr) return [];
+    return promptStr.split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+}
+
+// タグ配列を文字列に変換する関数
+function formatTagsToPrompt(tags) {
+    return tags.join(', ');
+}
+
+// タグを追加する関数
+function addTagToPrompt(currentPrompt, newTag) {
+    const tags = parsePromptToTags(currentPrompt);
+    const normalizedNewTag = newTag.replace(/_/g, ' ').trim();
+    
+    // 大文字小文字を区別せずに重複チェック
+    const isDuplicate = tags.some(tag => 
+        tag.toLowerCase() === normalizedNewTag.toLowerCase()
+    );
+    
+    if (!isDuplicate) {
+        tags.push(normalizedNewTag);
+    }
+    
+    return formatTagsToPrompt(tags);
+}
+
 // タグ候補を表示するポップアップを作成
 function createTagSuggestionPopup(tags, position) {
     const popup = document.createElement('div');
@@ -62,6 +79,9 @@ function createTagSuggestionPopup(tags, position) {
     popup.style.flexDirection = 'column';
     popup.style.maxHeight = '300px';
 
+    let currentCategory = null;
+    let currentTags = tags;
+
     // ドラッグ用のヘッダーを追加
     const header = document.createElement('div');
     header.style.cursor = 'move';
@@ -76,12 +96,87 @@ function createTagSuggestionPopup(tags, position) {
     header.style.alignItems = 'center';
     header.style.justifyContent = 'space-between';
 
-    // タイトルテキストを別の要素として作成
+    // タイトルと検索フィルターのコンテナ
+    const titleContainer = document.createElement('div');
+    titleContainer.style.display = 'flex';
+    titleContainer.style.alignItems = 'center';
+    titleContainer.style.gap = '8px';
+    titleContainer.style.flex = '1';
+
+    // タイトルテキスト
     const titleText = document.createElement('span');
     titleText.style.color = '#888';
-    titleText.style.pointerEvents = 'none'; // テキストでのイベントを無効化
+    titleText.style.pointerEvents = 'none';
     titleText.textContent = 'Related Tags';
-    header.appendChild(titleText);
+    titleContainer.appendChild(titleText);
+
+    // フィルターボタンのコンテナ
+    const filterContainer = document.createElement('div');
+    filterContainer.style.display = 'flex';
+    filterContainer.style.gap = '4px';
+
+    // フィルターボタンを作成する関数
+    function createFilterButton(category, label) {
+        const button = document.createElement('div');
+        button.style.padding = '2px 6px';
+        button.style.cursor = 'pointer';
+        button.style.borderRadius = '3px';
+        button.style.fontSize = '12px';
+        button.style.color = '#888';
+        button.textContent = label;
+
+        function updateButtonStyle() {
+            if (currentCategory === category) {
+                button.style.backgroundColor = '#444';
+                button.style.color = '#fff';
+            } else {
+                button.style.backgroundColor = 'transparent';
+                button.style.color = '#888';
+            }
+        }
+
+        button.addEventListener('click', () => {
+            currentCategory = currentCategory === category ? null : category;
+            updateFilterButtons();
+            updateTagList();
+        });
+
+        button.addEventListener('mouseenter', () => {
+            if (currentCategory !== category) {
+                button.style.backgroundColor = '#383838';
+            }
+        });
+
+        button.addEventListener('mouseleave', () => {
+            if (currentCategory !== category) {
+                button.style.backgroundColor = 'transparent';
+            }
+        });
+
+        return { button, updateStyle: updateButtonStyle };
+    }
+
+    // フィルターボタンを追加
+    const filterButtons = [
+        createFilterButton(null, 'ALL'),
+        createFilterButton(0, 'GEN'),
+        createFilterButton(1, 'ART'),
+        createFilterButton(2, 'CPY'),
+        createFilterButton(3, 'CHR'),
+        createFilterButton(4, 'META'),
+        createFilterButton(5, 'RTG'),
+    ];
+
+    filterButtons.forEach(({ button }) => {
+        filterContainer.appendChild(button);
+    });
+
+    function updateFilterButtons() {
+        filterButtons.forEach(({ updateStyle }) => updateStyle());
+    }
+
+    titleContainer.appendChild(filterContainer);
+    header.appendChild(titleContainer);
 
     // 閉じるボタンを追加
     const closeButton = document.createElement('div');
@@ -103,6 +198,70 @@ function createTagSuggestionPopup(tags, position) {
     tagContainer.style.flex = '1';
     popup.appendChild(tagContainer);
 
+    // タグリストを更新する関数
+    function updateTagList() {
+        tagContainer.innerHTML = '';
+        const filteredTags = currentCategory === null ? currentTags : filterTagsByCategory(currentTags, currentCategory);
+        
+        filteredTags.forEach(tag => {
+            const tagElement = document.createElement('div');
+            tagElement.style.padding = '4px';
+            tagElement.style.cursor = 'pointer';
+            tagElement.style.borderBottom = '1px solid #444';
+            
+            const tagName = tag.tag.name;
+            const categoryName = getCategoryName(tag.tag.category);
+            const postCount = tag.tag.post_count;
+            const tagColors = getTagColor(tag.tag.category);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.style.display = 'flex';
+            contentDiv.style.justifyContent = 'space-between';
+            contentDiv.style.alignItems = 'center';
+            contentDiv.style.gap = '8px';
+
+            const tagNameSpan = document.createElement('span');
+            tagNameSpan.style.overflow = 'hidden';
+            tagNameSpan.style.textOverflow = 'ellipsis';
+            tagNameSpan.style.whiteSpace = 'nowrap';
+            tagNameSpan.style.minWidth = '0';
+            tagNameSpan.style.flex = '1';
+            tagNameSpan.style.color = tagColors.color;
+            tagNameSpan.textContent = tagName;
+            tagNameSpan.title = tagName;
+
+            const infoSpan = document.createElement('span');
+            infoSpan.style.color = '#888';
+            infoSpan.style.whiteSpace = 'nowrap';
+            infoSpan.style.flexShrink = '0';
+            infoSpan.innerHTML = `<span style="color: #666;">[${categoryName}]</span> ${postCount}`;
+
+            contentDiv.appendChild(tagNameSpan);
+            contentDiv.appendChild(infoSpan);
+            tagElement.appendChild(contentDiv);
+
+            tagElement.addEventListener('mouseenter', () => {
+                tagElement.style.backgroundColor = '#444';
+                tagNameSpan.style.color = tagColors.hoverColor;
+            });
+            tagElement.addEventListener('mouseleave', () => {
+                tagElement.style.backgroundColor = 'transparent';
+                tagNameSpan.style.color = tagColors.color;
+            });
+            tagElement.addEventListener('click', () => {
+                const selectedNode = app.graph._nodes.find(x => x.selected);
+                if (selectedNode && selectedNode.widgets) {
+                    const promptWidget = selectedNode.widgets.find(w => w.type == "customtext");
+                    if (promptWidget) {
+                        promptWidget.value = addTagToPrompt(promptWidget.value, tagName);
+                        selectedNode.setDirtyCanvas(true);
+                    }
+                }
+            });
+            tagContainer.appendChild(tagElement);
+        });
+    }
+
     // ドラッグ機能の実装
     let isDragging = false;
     let currentX;
@@ -118,7 +277,12 @@ function createTagSuggestionPopup(tags, position) {
         initialX = e.clientX - xOffset;
         initialY = e.clientY - yOffset;
 
-        if (e.target === header) {
+        // ヘッダーまたはその子要素でドラッグを開始できるように
+        const isHeaderOrChild = e.target === header || header.contains(e.target);
+        // フィルターボタンのクリックイベントを妨げないように
+        const isFilterButton = filterButtons.some(({ button }) => e.target === button);
+        
+        if (isHeaderOrChild && !isFilterButton) {
             isDragging = true;
         }
     }
@@ -140,6 +304,10 @@ function createTagSuggestionPopup(tags, position) {
         }
     }
 
+    // ドラッグイベントをヘッダー全体に適用
+    header.style.cursor = 'move';
+    titleContainer.style.cursor = 'move';
+    titleText.style.cursor = 'move';
     header.addEventListener('mousedown', dragStart);
     document.addEventListener('mousemove', drag);
     document.addEventListener('mouseup', dragEnd);
@@ -157,67 +325,8 @@ function createTagSuggestionPopup(tags, position) {
         return categories[category] || "";
     }
 
-    tags.forEach(tag => {
-        const tagElement = document.createElement('div');
-        tagElement.style.padding = '4px';
-        tagElement.style.cursor = 'pointer';
-        tagElement.style.borderBottom = '1px solid #444';
-        
-        const tagName = tag.tag.name;
-        const categoryName = getCategoryName(tag.tag.category);
-        const postCount = tag.tag.post_count;
-        const tagColors = getTagColor(tag.tag.category);
-
-        // タグ情報を含むコンテナ
-        const contentDiv = document.createElement('div');
-        contentDiv.style.display = 'flex';
-        contentDiv.style.justifyContent = 'space-between';
-        contentDiv.style.alignItems = 'center';
-        contentDiv.style.gap = '8px';
-
-        // タグ名のコンテナ
-        const tagNameSpan = document.createElement('span');
-        tagNameSpan.style.overflow = 'hidden';
-        tagNameSpan.style.textOverflow = 'ellipsis';
-        tagNameSpan.style.whiteSpace = 'nowrap';
-        tagNameSpan.style.minWidth = '0';
-        tagNameSpan.style.flex = '1';
-        tagNameSpan.style.color = tagColors.color;
-        tagNameSpan.textContent = tagName;
-        tagNameSpan.title = tagName;
-
-        // カテゴリと投稿数のコンテナ
-        const infoSpan = document.createElement('span');
-        infoSpan.style.color = '#888';
-        infoSpan.style.whiteSpace = 'nowrap';
-        infoSpan.style.flexShrink = '0';
-        infoSpan.innerHTML = `<span style="color: #666;">[${categoryName}]</span> ${postCount}`;
-
-        contentDiv.appendChild(tagNameSpan);
-        contentDiv.appendChild(infoSpan);
-        tagElement.appendChild(contentDiv);
-
-        tagElement.addEventListener('mouseenter', () => {
-            tagElement.style.backgroundColor = '#444';
-            tagNameSpan.style.color = tagColors.hoverColor;
-        });
-        tagElement.addEventListener('mouseleave', () => {
-            tagElement.style.backgroundColor = 'transparent';
-            tagNameSpan.style.color = tagColors.color;
-        });
-        tagElement.addEventListener('click', () => {
-            const selectedNode = app.graph._nodes.find(x => x.selected);
-            if (selectedNode && selectedNode.widgets) {
-                const promptWidget = selectedNode.widgets.find(w => w.type == "customtext");
-                if (promptWidget) {
-                    const currentValue = promptWidget.value;
-                    promptWidget.value = currentValue ? `${currentValue}, ${tagName.replace(/_/g, " ")}` : tagName.replace(/_/g, " ");
-                    selectedNode.setDirtyCanvas(true);
-                }
-            }
-        });
-        tagContainer.appendChild(tagElement);
-    });
+    // 初期タグリストを表示
+    updateTagList();
 
     // Escキーでポップアップを閉じる
     const handleKeyDown = (e) => {
@@ -246,6 +355,52 @@ app.registerExtension({
             tooltip: "サンプル設定の説明文"
         });
 
+        // 検索アイコンのポップアップを作成
+        const searchButton = document.createElement('button');
+        searchButton.innerHTML = '🔍Search Related Tags';
+        searchButton.style.position = 'fixed';
+        searchButton.style.fontSize = '11px';
+        searchButton.style.padding = '2px 2px';
+        searchButton.style.backgroundColor = '#2d2d2d';
+        searchButton.style.border = '1px solid #666';
+        searchButton.style.borderRadius = '4px';
+        searchButton.style.cursor = 'pointer';
+        searchButton.style.color = '#fff';
+        searchButton.style.display = 'none';
+        searchButton.style.zIndex = '10000';
+        searchButton.title = 'Search Related Tags';
+        document.body.appendChild(searchButton);
+
+        searchButton.addEventListener('mouseenter', () => {
+            searchButton.style.backgroundColor = '#444';
+        });
+
+        searchButton.addEventListener('mouseleave', () => {
+            searchButton.style.backgroundColor = '#2d2d2d';
+        });
+
+        searchButton.addEventListener('click', async () => {
+            const selectedText = window.getSelection().toString();
+            if (selectedText) {
+                let tags = selectedText.split(",");
+                if (tags.length > 0) {
+                    tags = tags.map(tag => tag.trim().replace(/ /g, "_"));
+                    tags = tags.splice(0, 2);
+                    const relatedTags = await searchRelatedTags(tags);
+                    
+                    if (currentPopup) {
+                        currentPopup.remove();
+                    }
+
+                    currentPopup = createTagSuggestionPopup(relatedTags.related_tags, {
+                        x: lastMousePosition.x,
+                        y: lastMousePosition.y
+                    });
+                }
+            }
+            searchButton.style.display = 'none';
+        });
+
         let currentPopup = null;
         let lastMousePosition = { x: 0, y: 0 };
 
@@ -254,29 +409,40 @@ app.registerExtension({
             lastMousePosition = { x: e.clientX, y: e.clientY };
         });
 
+        // テキスト選択を監視
+        document.addEventListener('selectionchange', () => {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            if (selectedText) {
+                searchButton.style.left = `${lastMousePosition.x + 10}px`;
+                searchButton.style.top = `${lastMousePosition.y + 10}px`;
+                searchButton.style.display = 'block';
+            } else {
+                setTimeout(() => {
+                    if (!window.getSelection().toString().trim()) {
+                        searchButton.style.display = 'none';
+                    }
+                }, 100);
+            }
+        });
+
         // キーボードショートカットの追加
         document.addEventListener('keydown', async (e) => {
-            const validKeys = ['0', '1', '2', '3', '4', '5', '-'];
+            const validKeys = ['-'];
             if (e.altKey && validKeys.includes(e.key)) {
                 let selectedText = window.getSelection().toString();
                 let tags = selectedText.split(",");
                 if (tags.length > 0) {
                     tags = tags.map(tag => tag.trim().replace(/ /g, "_"));
-                    // タグは2件以下でないと弾かれるので削る
                     tags = tags.splice(0, 2);
                     const relatedTags = await searchRelatedTags(tags);
                     
-                    // カテゴリでフィルタリング
-                    const category = e.key === '-' ? null : parseInt(e.key);
-                    const filteredTags = filterTagsByCategory(relatedTags.related_tags, category);
-                    
-                    // 既存のポップアップを削除
                     if (currentPopup) {
                         currentPopup.remove();
                     }
 
-                    // 現在のマウス位置にポップアップを表示
-                    currentPopup = createTagSuggestionPopup(filteredTags, {
+                    currentPopup = createTagSuggestionPopup(relatedTags.related_tags, {
                         x: lastMousePosition.x,
                         y: lastMousePosition.y
                     });
