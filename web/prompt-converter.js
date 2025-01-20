@@ -357,7 +357,19 @@ app.registerExtension({
 
         // 検索アイコンのポップアップを作成
         const searchButton = document.createElement('button');
-        searchButton.innerHTML = '🔍Search Related Tags';
+        const defaultButtonText = '🔍Search Related Tags';
+        const loadingButtonText = '<span class="spinner" style="display: inline-block; width: 10px; height: 10px; border: 2px solid #ffffff80; border-top-color: #fff; border-radius: 50%; margin-left: 5px; animation: spin 1s linear infinite;"></span>Search Related Tags';
+        
+        // スピナーのアニメーションスタイルを追加
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        searchButton.innerHTML = defaultButtonText;
         searchButton.style.position = 'fixed';
         searchButton.style.fontSize = '11px';
         searchButton.style.padding = '2px 2px';
@@ -382,23 +394,33 @@ app.registerExtension({
         searchButton.addEventListener('click', async () => {
             const selectedText = window.getSelection().toString();
             if (selectedText) {
-                let tags = selectedText.split(",");
-                if (tags.length > 0) {
-                    tags = tags.map(tag => tag.trim().replace(/ /g, "_"));
-                    tags = tags.splice(0, 2);
-                    const relatedTags = await searchRelatedTags(tags);
-                    
-                    if (currentPopup) {
-                        currentPopup.remove();
-                    }
+                // 検索開始時にスピナーを表示
+                searchButton.innerHTML = loadingButtonText;
+                searchButton.style.cursor = 'wait';
 
-                    currentPopup = createTagSuggestionPopup(relatedTags.related_tags, {
-                        x: lastMousePosition.x,
-                        y: lastMousePosition.y
-                    });
+                try {
+                    let tags = selectedText.split(",");
+                    if (tags.length > 0) {
+                        tags = tags.map(tag => tag.trim().replace(/ /g, "_"));
+                        tags = tags.splice(0, 2);
+                        const relatedTags = await searchRelatedTags(tags);
+                        
+                        if (currentPopup) {
+                            currentPopup.remove();
+                        }
+
+                        currentPopup = createTagSuggestionPopup(relatedTags.related_tags, {
+                            x: lastMousePosition.x,
+                            y: lastMousePosition.y
+                        });
+                    }
+                } finally {
+                    // 検索完了時（成功/失敗に関わらず）スピナーを非表示
+                    searchButton.innerHTML = defaultButtonText;
+                    searchButton.style.cursor = 'pointer';
+                    searchButton.style.display = 'none';
                 }
             }
-            searchButton.style.display = 'none';
         });
 
         let currentPopup = null;
@@ -411,6 +433,8 @@ app.registerExtension({
 
         // テキスト選択を監視
         document.addEventListener('selectionchange', () => {
+            if (!searchUploadSetting.value) return;
+
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
 
@@ -429,6 +453,8 @@ app.registerExtension({
 
         // キーボードショートカットの追加
         document.addEventListener('keydown', async (e) => {
+            if (!searchUploadSetting.value) return;
+
             const validKeys = ['-'];
             if (e.altKey && validKeys.includes(e.key)) {
                 let selectedText = window.getSelection().toString();
@@ -446,6 +472,16 @@ app.registerExtension({
                         x: lastMousePosition.x,
                         y: lastMousePosition.y
                     });
+                }
+            }
+        });
+
+        // 設定変更時にポップアップを非表示にする
+        searchUploadSetting.addEventListener("change", value => {
+            if (!value) {
+                searchButton.style.display = 'none';
+                if (currentPopup) {
+                    currentPopup.remove();
                 }
             }
         });
