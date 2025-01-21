@@ -1,4 +1,28 @@
 import { app } from "../../scripts/app.js";
+import { wikiDataArray } from "./danbooru_wiki.slim.js";
+
+// wikiデータを保持する変数を追加
+let wikiData = null;
+// 設定を保持する変数を追加
+let settings = {
+    searchUpload: null,
+    displayOtherName: null
+};
+
+// wikiデータを読み込む関数
+function loadWikiData() {
+    try {
+        // 配列からオブジェクトに変換
+        wikiData = wikiDataArray.reduce((acc, item) => {
+            acc[item.name.replace(/ /g, '_')] = item;
+            return acc;
+        }, {});
+        console.log('Wiki data loaded successfully');
+    } catch (error) {
+        console.error('Failed to load wiki data:', error);
+        wikiData = {};
+    }
+}
 
 async function searchRelatedTags(tag) {
     try {
@@ -214,9 +238,15 @@ function createTagSuggestionPopup(tags, position) {
 
             const contentDiv = document.createElement('div');
             contentDiv.style.display = 'flex';
-            contentDiv.style.justifyContent = 'space-between';
-            contentDiv.style.alignItems = 'center';
-            contentDiv.style.gap = '8px';
+            contentDiv.style.flexDirection = 'column';
+            contentDiv.style.gap = '2px';
+
+            // メインの行（タグ名と投稿数）
+            const mainRow = document.createElement('div');
+            mainRow.style.display = 'flex';
+            mainRow.style.justifyContent = 'space-between';
+            mainRow.style.alignItems = 'center';
+            mainRow.style.gap = '8px';
 
             const tagNameSpan = document.createElement('span');
             tagNameSpan.style.overflow = 'hidden';
@@ -234,8 +264,24 @@ function createTagSuggestionPopup(tags, position) {
             infoSpan.style.flexShrink = '0';
             infoSpan.innerHTML = `<span style="color: #666;">[${categoryName}]</span> ${postCount}`;
 
-            contentDiv.appendChild(tagNameSpan);
-            contentDiv.appendChild(infoSpan);
+            mainRow.appendChild(tagNameSpan);
+            mainRow.appendChild(infoSpan);
+            contentDiv.appendChild(mainRow);
+
+            // 別名の行（設定が有効な場合のみ表示）
+            if (settings.displayOtherName.value && wikiData) {
+                const normalizedTagName = tagName.replace(/ /g, '_');
+                const tagInfo = wikiData[normalizedTagName];
+                if (tagInfo && tagInfo.otherNames && tagInfo.otherNames.length > 0) {
+                    const otherNamesRow = document.createElement('div');
+                    otherNamesRow.style.fontSize = '11px';
+                    otherNamesRow.style.color = '#888';
+                    otherNamesRow.style.paddingLeft = '8px';
+                    otherNamesRow.textContent = tagInfo.otherNames.join(', ');
+                    contentDiv.appendChild(otherNamesRow);
+                }
+            }
+
             tagElement.appendChild(contentDiv);
 
             tagElement.addEventListener('mouseenter', () => {
@@ -343,13 +389,26 @@ function createTagSuggestionPopup(tags, position) {
 app.registerExtension({
     name: "Prompt Converter",
     async setup() {
-        const searchUploadSetting = app.ui.settings.addSetting({
-            id: "searchRelatedTag",
+        // wikiデータを読み込む（非同期である必要がなくなった）
+        loadWikiData();
+        
+        // 設定をまとめて管理
+        settings.searchRelatedTags = app.ui.settings.addSetting({
+            id: "searchRelatedTags",
             name: "Search Related Tag",
-            category: ["Prompt Converter", "Settings"],
+            category: ["Prompt Converter", "0_searchRelatedTags"],
             type: "boolean",
             defaultValue: false,
-            tooltip: "サンプル設定の説明文"
+            tooltip: "Search Related Tags"
+        });
+
+        settings.displayOtherName = app.ui.settings.addSetting({
+            id: "displayOtherName",
+            name: "Display Other Name",
+            category: ["Prompt Converter", "1_displayOtherName"],
+            type: "boolean",
+            defaultValue: true,
+            tooltip: "Display Other Name"
         });
 
         // 検索アイコンのポップアップを作成
@@ -430,7 +489,7 @@ app.registerExtension({
 
         // テキスト選択を監視
         document.addEventListener('selectionchange', () => {
-            if (!searchUploadSetting.value) return;
+            if (!settings.searchRelatedTags.value) return;
 
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
@@ -450,7 +509,7 @@ app.registerExtension({
 
         // キーボードショートカットの追加
         document.addEventListener('keydown', async (e) => {
-            if (!searchUploadSetting.value) return;
+            if (!settings.searchRelatedTags.value) return;
 
             const validKeys = ['-'];
             if (e.altKey && validKeys.includes(e.key)) {
@@ -469,16 +528,6 @@ app.registerExtension({
                         x: lastMousePosition.x,
                         y: lastMousePosition.y
                     });
-                }
-            }
-        });
-
-        // 設定変更時にポップアップを非表示にする
-        searchUploadSetting.addEventListener("change", value => {
-            if (!value) {
-                searchButton.style.display = 'none';
-                if (currentPopup) {
-                    currentPopup.remove();
                 }
             }
         });
