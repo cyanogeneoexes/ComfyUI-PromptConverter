@@ -7,7 +7,8 @@ let reverseWikiData = null;  // 逆引き辞書データを保持する変数を
 // 設定を保持する変数を追加
 let settings = {
     searchUpload: null,
-    displayOtherName: null
+    displayOtherName: null,
+    replaceOtherName: null  // 別名置換機能の設定を追加
 };
 
 // wikiデータを読み込む関数
@@ -494,6 +495,15 @@ app.registerExtension({
             tooltip: "Display Other Name"
         });
 
+        settings.replaceOtherName = app.ui.settings.addSetting({
+            id: "replaceOtherName",
+            name: "Replace Other Name",
+            category: ["Prompt Converter", "2_replaceOtherName"],
+            type: "boolean",
+            defaultValue: true,
+            tooltip: "Enable replacement suggestions for other names"
+        });
+
         // 検索アイコンのポップアップを作成
         const searchButton = document.createElement('button');
         const defaultButtonText = '🔍Search Related Tags';
@@ -632,22 +642,26 @@ app.registerExtension({
                 searchButton.style.top = `${lastMousePosition.y - 10}px`;
                 searchButton.style.display = 'block';
 
-                // 逆引き置換ボタンの表示制御
-                const matches = findReverseMatches(selectedText);
-                if (matches.length > 0) {
-                    // コンテナをクリア
-                    replaceButtonsContainer.innerHTML = '';
-                    
-                    // マッチした各項目のボタンを作成
-                    matches.forEach(match => {
-                        const button = createReplaceButton(match, selectedText);
-                        replaceButtonsContainer.appendChild(button);
-                    });
+                // 逆引き置換ボタンの表示制御（設定が有効な場合のみ）
+                if (settings.replaceOtherName.value) {
+                    const matches = findReverseMatches(selectedText);
+                    if (matches.length > 0) {
+                        // コンテナをクリア
+                        replaceButtonsContainer.innerHTML = '';
+                        
+                        // マッチした各項目のボタンを作成
+                        matches.forEach(match => {
+                            const button = createReplaceButton(match, selectedText);
+                            replaceButtonsContainer.appendChild(button);
+                        });
 
-                    // コンテナの位置を設定して表示
-                    replaceButtonsContainer.style.left = `${lastMousePosition.x + 10}px`;
-                    replaceButtonsContainer.style.top = `${lastMousePosition.y + 10}px`;
-                    replaceButtonsContainer.style.display = 'block';
+                        // コンテナの位置を設定して表示
+                        replaceButtonsContainer.style.left = `${lastMousePosition.x + 10}px`;
+                        replaceButtonsContainer.style.top = `${lastMousePosition.y + 10}px`;
+                        replaceButtonsContainer.style.display = 'block';
+                    } else {
+                        replaceButtonsContainer.style.display = 'none';
+                    }
                 } else {
                     replaceButtonsContainer.style.display = 'none';
                 }
