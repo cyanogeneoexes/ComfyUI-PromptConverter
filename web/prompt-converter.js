@@ -11,6 +11,10 @@ let settings = {
     replaceOtherName: null  // 別名置換機能の設定を追加
 };
 
+// ボタン要素をグローバルスコープで宣言
+let searchButton = null;
+let replaceButtonsContainer = null;
+
 // wikiデータを読み込む関数
 function loadWikiData() {
     try {
@@ -415,7 +419,10 @@ function findReverseMatches(text) {
 }
 
 // 複数の置換ボタンを管理するコンテナを作成
-const replaceButtonsContainer = document.createElement('div');
+replaceButtonsContainer = document.createElement('div');
+replaceButtonsContainer.remove = function() {
+    this.style.display = 'none';
+};
 replaceButtonsContainer.style.position = 'fixed';
 replaceButtonsContainer.style.display = 'none';
 replaceButtonsContainer.style.zIndex = '10000';
@@ -505,7 +512,10 @@ app.registerExtension({
         });
 
         // 検索アイコンのポップアップを作成
-        const searchButton = document.createElement('button');
+        searchButton = document.createElement('button');
+        searchButton.remove = function() {
+            this.style.display = 'none';
+        };
         const defaultButtonText = '🔍Search Related Tags';
         const loadingButtonText = '<span class="spinner" style="display: inline-block; width: 10px; height: 10px; border: 2px solid #ffffff80; border-top-color: #fff; border-radius: 50%; margin-left: 5px; animation: spin 1s linear infinite;"></span>Search Related Tags';
         
@@ -575,7 +585,6 @@ app.registerExtension({
         searchButton.style.border = '1px solid #666';
         searchButton.style.borderRadius = '4px';
         searchButton.style.cursor = 'pointer';
-        searchButton.style.color = '#fff';
         searchButton.style.display = 'none';
         searchButton.style.zIndex = '10000';
         searchButton.title = 'Search Related Tags';
@@ -699,7 +708,20 @@ app.registerExtension({
                 }
             }
         });
+
+        // ノードが選択されていない場合は全てのポップアップを閉じる
+        document.addEventListener('click', () => {
+            if (!app.graph._nodes.find(x => x.selected)) {
+                if (searchButton) {
+                    searchButton.remove();
+                }           
+                if (replaceButtonsContainer) {
+                    replaceButtonsContainer.remove();
+                }
+            }
+        });
     }
 });
+
 
 
