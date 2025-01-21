@@ -3,6 +3,7 @@ import { wikiDataArray } from "./danbooru_wiki.slim.js";
 
 // wikiデータを保持する変数を追加
 let wikiData = null;
+let reverseWikiData = null;  // 逆引き辞書データを保持する変数を追加
 // 設定を保持する変数を追加
 let settings = {
     searchUpload: null,
@@ -17,10 +18,23 @@ function loadWikiData() {
             acc[item.name.replace(/ /g, '_')] = item;
             return acc;
         }, {});
-        console.log('Wiki data loaded successfully');
+
+        // 逆引き辞書データを作成
+        reverseWikiData = wikiDataArray.reduce((acc, item) => {
+            if (item.otherNames && Array.isArray(item.otherNames)) {
+                item.otherNames.forEach(otherName => {
+                    const normalizedOtherName = otherName.replace(/ /g, '_');
+                    acc[normalizedOtherName] = item.name.replace(/ /g, '_');
+                });
+            }
+            return acc;
+        }, {});
+
+        console.log('Wiki data and reverse lookup data loaded successfully');
     } catch (error) {
         console.error('Failed to load wiki data:', error);
         wikiData = {};
+        reverseWikiData = {};
     }
 }
 
@@ -416,6 +430,55 @@ app.registerExtension({
         const defaultButtonText = '🔍Search Related Tags';
         const loadingButtonText = '<span class="spinner" style="display: inline-block; width: 10px; height: 10px; border: 2px solid #ffffff80; border-top-color: #fff; border-radius: 50%; margin-left: 5px; animation: spin 1s linear infinite;"></span>Search Related Tags';
         
+        // 逆引き置換ボタンを作成
+        const replaceButton = document.createElement('button');
+        replaceButton.style.position = 'fixed';
+        replaceButton.style.fontSize = '11px';
+        replaceButton.style.padding = '2px 2px';
+        replaceButton.style.backgroundColor = '#2d2d2d';
+        replaceButton.style.border = '1px solid #666';
+        replaceButton.style.borderRadius = '4px';
+        replaceButton.style.cursor = 'pointer';
+        replaceButton.style.color = '#fff';
+        replaceButton.style.display = 'none';
+        replaceButton.style.zIndex = '10000';
+
+        replaceButton.addEventListener('mouseenter', () => {
+            replaceButton.style.backgroundColor = '#444';
+        });
+
+        replaceButton.addEventListener('mouseleave', () => {
+            replaceButton.style.backgroundColor = '#2d2d2d';
+        });
+
+        replaceButton.addEventListener('click', () => {
+            const selectedNode = app.graph._nodes.find(x => x.selected);
+            if (selectedNode && selectedNode.widgets) {
+                const promptWidget = selectedNode.widgets.find(w => w.type == "customtext");
+                if (promptWidget) {
+                    const selection = window.getSelection();
+                    const range = selection.getRangeAt(0);
+                    const selectedText = selection.toString().trim();
+                    const normalizedSelectedText = selectedText.replace(/ /g, '_');
+                    const englishTag = reverseWikiData[normalizedSelectedText];
+                    
+                    if (englishTag) {
+                        const fullText = promptWidget.value;
+                        const start = promptWidget.value.indexOf(selectedText);
+                        if (start !== -1) {
+                            promptWidget.value = fullText.substring(0, start) + 
+                                               englishTag + 
+                                               fullText.substring(start + selectedText.length);
+                            selectedNode.setDirtyCanvas(true);
+                        }
+                    }
+                }
+            }
+            replaceButton.style.display = 'none';
+        });
+
+        document.body.appendChild(replaceButton);
+
         // スピナーのアニメーションスタイルを追加
         const style = document.createElement('style');
         style.textContent = `
@@ -495,13 +558,27 @@ app.registerExtension({
             const selectedText = selection.toString().trim();
 
             if (selectedText) {
+                // 検索ボタンの表示
                 searchButton.style.left = `${lastMousePosition.x + 10}px`;
                 searchButton.style.top = `${lastMousePosition.y + 10}px`;
                 searchButton.style.display = 'block';
+
+                // 逆引き置換ボタンの表示制御
+                const normalizedSelectedText = selectedText.replace(/ /g, '_');
+                if (reverseWikiData[normalizedSelectedText]) {
+                    replaceButton.textContent = `🔄 ${normalizedSelectedText} → ${reverseWikiData[normalizedSelectedText]}`;
+                    replaceButton.style.display = 'block';
+                    // 置換ボタンを検索ボタンの上に配置
+                    replaceButton.style.left = `${lastMousePosition.x + 10}px`;
+                    replaceButton.style.top = `${lastMousePosition.y - 30}px`;  // 検索ボタンの上に表示
+                } else {
+                    replaceButton.style.display = 'none';
+                }
             } else {
                 setTimeout(() => {
                     if (!window.getSelection().toString().trim()) {
                         searchButton.style.display = 'none';
+                        replaceButton.style.display = 'none';
                     }
                 }, 100);
             }
