@@ -639,7 +639,7 @@ app.registerExtension({
             if (selectedText) {
                 // 検索ボタンの表示
                 searchButton.style.left = `${lastMousePosition.x + 10}px`;
-                searchButton.style.top = `${lastMousePosition.y - 10}px`;
+                searchButton.style.top = `${lastMousePosition.y + 10}px`;
                 searchButton.style.display = 'block';
 
                 // 逆引き置換ボタンの表示制御（設定が有効な場合のみ）
@@ -657,7 +657,7 @@ app.registerExtension({
 
                         // コンテナの位置を設定して表示
                         replaceButtonsContainer.style.left = `${lastMousePosition.x + 10}px`;
-                        replaceButtonsContainer.style.top = `${lastMousePosition.y + 10}px`;
+                        replaceButtonsContainer.style.top = `${lastMousePosition.y + 30}px`;
                         replaceButtonsContainer.style.display = 'block';
                     } else {
                         replaceButtonsContainer.style.display = 'none';
