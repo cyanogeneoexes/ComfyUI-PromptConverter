@@ -3,7 +3,7 @@ import { wikiDataArray } from "./danbooru_wiki.slim.js";
 
 // wikiデータを保持する変数を追加
 let wikiData = null;
-let reverseWikiData = null;  // 逆引き辞書データを保持する変数を追加
+let reverseWikiData = null;  // 逆引き辞書データを保持する変数を追加（配列形式に変更）
 // 設定を保持する変数を追加
 let settings = {
     searchUpload: null,
@@ -19,22 +19,24 @@ function loadWikiData() {
             return acc;
         }, {});
 
-        // 逆引き辞書データを作成
-        reverseWikiData = wikiDataArray.reduce((acc, item) => {
+        // 逆引きデータを配列形式で作成
+        reverseWikiData = [];
+        wikiDataArray.forEach(item => {
             if (item.otherNames && Array.isArray(item.otherNames)) {
                 item.otherNames.forEach(otherName => {
-                    const normalizedOtherName = otherName.replace(/ /g, '_');
-                    acc[normalizedOtherName] = item.name.replace(/ /g, '_');
+                    reverseWikiData.push({
+                        otherName: otherName.replace(/ /g, '_'),
+                        originalName: item.name.replace(/ /g, '_')
+                    });
                 });
             }
-            return acc;
-        }, {});
+        });
 
         console.log('Wiki data and reverse lookup data loaded successfully');
     } catch (error) {
         console.error('Failed to load wiki data:', error);
         wikiData = {};
-        reverseWikiData = {};
+        reverseWikiData = [];
     }
 }
 
@@ -400,6 +402,73 @@ function createTagSuggestionPopup(tags, position) {
     return popup;
 }
 
+// 部分一致で逆引き検索を行う関数
+function findReverseMatches(text) {
+    const normalizedText = text.replace(/ /g, '_').toLowerCase();
+    return reverseWikiData
+        .filter(item => item.otherName.toLowerCase().includes(normalizedText))
+        .map(item => ({
+            searchText: item.otherName,
+            englishTag: item.originalName
+        }));
+}
+
+// 複数の置換ボタンを管理するコンテナを作成
+const replaceButtonsContainer = document.createElement('div');
+replaceButtonsContainer.style.position = 'fixed';
+replaceButtonsContainer.style.display = 'none';
+replaceButtonsContainer.style.zIndex = '10000';
+replaceButtonsContainer.style.backgroundColor = '#2d2d2d';
+replaceButtonsContainer.style.border = '1px solid #666';
+replaceButtonsContainer.style.borderRadius = '4px';
+replaceButtonsContainer.style.padding = '2px';
+document.body.appendChild(replaceButtonsContainer);
+
+// 置換ボタンを作成する関数
+function createReplaceButton(match, selectedText) {
+    const button = document.createElement('button');
+    button.style.display = 'block';
+    button.style.width = '100%';
+    button.style.fontSize = '11px';
+    button.style.padding = '2px 4px';
+    button.style.marginBottom = '2px';
+    button.style.backgroundColor = '#2d2d2d';
+    button.style.border = '1px solid #666';
+    button.style.borderRadius = '4px';
+    button.style.cursor = 'pointer';
+    button.style.color = '#fff';
+    button.style.textAlign = 'left';
+    button.textContent = `🔄 ${match.searchText} → ${match.englishTag}`;
+
+    button.addEventListener('mouseenter', () => {
+        button.style.backgroundColor = '#444';
+    });
+
+    button.addEventListener('mouseleave', () => {
+        button.style.backgroundColor = '#2d2d2d';
+    });
+
+    button.addEventListener('click', () => {
+        const selectedNode = app.graph._nodes.find(x => x.selected);
+        if (selectedNode && selectedNode.widgets) {
+            const promptWidget = selectedNode.widgets.find(w => w.type == "customtext");
+            if (promptWidget) {
+                const fullText = promptWidget.value;
+                const start = promptWidget.value.indexOf(selectedText);
+                if (start !== -1) {
+                    promptWidget.value = fullText.substring(0, start) + 
+                                       match.englishTag + 
+                                       fullText.substring(start + selectedText.length);
+                    selectedNode.setDirtyCanvas(true);
+                }
+            }
+        }
+        replaceButtonsContainer.style.display = 'none';
+    });
+
+    return button;
+}
+
 app.registerExtension({
     name: "Prompt Converter",
     async setup() {
@@ -460,7 +529,7 @@ app.registerExtension({
                     const range = selection.getRangeAt(0);
                     const selectedText = selection.toString().trim();
                     const normalizedSelectedText = selectedText.replace(/ /g, '_');
-                    const englishTag = reverseWikiData[normalizedSelectedText];
+                    const englishTag = reverseWikiData.find(item => item.otherName === normalizedSelectedText)?.originalName;
                     
                     if (englishTag) {
                         const fullText = promptWidget.value;
@@ -564,21 +633,29 @@ app.registerExtension({
                 searchButton.style.display = 'block';
 
                 // 逆引き置換ボタンの表示制御
-                const normalizedSelectedText = selectedText.replace(/ /g, '_');
-                if (reverseWikiData[normalizedSelectedText]) {
-                    replaceButton.textContent = `🔄 ${normalizedSelectedText} → ${reverseWikiData[normalizedSelectedText]}`;
-                    replaceButton.style.display = 'block';
-                    // 置換ボタンを検索ボタンの上に配置
-                    replaceButton.style.left = `${lastMousePosition.x + 10}px`;
-                    replaceButton.style.top = `${lastMousePosition.y + 10}px`;
+                const matches = findReverseMatches(selectedText);
+                if (matches.length > 0) {
+                    // コンテナをクリア
+                    replaceButtonsContainer.innerHTML = '';
+                    
+                    // マッチした各項目のボタンを作成
+                    matches.forEach(match => {
+                        const button = createReplaceButton(match, selectedText);
+                        replaceButtonsContainer.appendChild(button);
+                    });
+
+                    // コンテナの位置を設定して表示
+                    replaceButtonsContainer.style.left = `${lastMousePosition.x + 10}px`;
+                    replaceButtonsContainer.style.top = `${lastMousePosition.y + 10}px`;
+                    replaceButtonsContainer.style.display = 'block';
                 } else {
-                    replaceButton.style.display = 'none';
+                    replaceButtonsContainer.style.display = 'none';
                 }
             } else {
                 setTimeout(() => {
                     if (!window.getSelection().toString().trim()) {
                         searchButton.style.display = 'none';
-                        replaceButton.style.display = 'none';
+                        replaceButtonsContainer.style.display = 'none';
                     }
                 }, 100);
             }
