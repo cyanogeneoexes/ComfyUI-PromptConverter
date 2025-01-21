@@ -560,7 +560,7 @@ app.registerExtension({
             if (selectedText) {
                 // 検索ボタンの表示
                 searchButton.style.left = `${lastMousePosition.x + 10}px`;
-                searchButton.style.top = `${lastMousePosition.y + 10}px`;
+                searchButton.style.top = `${lastMousePosition.y - 10}px`;
                 searchButton.style.display = 'block';
 
                 // 逆引き置換ボタンの表示制御
@@ -570,7 +570,7 @@ app.registerExtension({
                     replaceButton.style.display = 'block';
                     // 置換ボタンを検索ボタンの上に配置
                     replaceButton.style.left = `${lastMousePosition.x + 10}px`;
-                    replaceButton.style.top = `${lastMousePosition.y - 30}px`;  // 検索ボタンの上に表示
+                    replaceButton.style.top = `${lastMousePosition.y + 10}px`;
                 } else {
                     replaceButton.style.display = 'none';
                 }
