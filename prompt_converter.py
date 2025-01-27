@@ -20,7 +20,31 @@ class PromptConverter:
 
         self.auto_quality_tags = json.loads((Path(__file__).parent / Path("auto_quality_tags.json")).read_text())
         
-        self.score_tags_list = ["score_9", "score_8", "score_7", "score_6", "score_5", "score_4", "score_3", "score_2", "score_1", "score_8_up", "score_7_up", "score_6_up", "score_5_up", "score_4_up", "score_3_up", "score_2_up", "score_1_up"]
+        self.score_tags_list = [
+            "score_9",
+            "score_8",
+            "score_7",
+            "score_6",
+            "score_5",
+            "score_4",
+            "score_3",
+            "score_2",
+            "score_1",
+            "score_8_up",
+            "score_7_up",
+            "score_6_up",
+            "score_5_up",
+            "score_4_up",
+            "score_3_up",
+            "score_2_up",
+            "score_1_up",
+            "high_score",
+            "great_score",
+            "good_score",
+            "average_score",
+            "bad_score",
+            "low_score"
+        ]
         self.quality_tags_list = [
             "masterpiece",
             "best_quality",
@@ -91,8 +115,8 @@ class PromptConverter:
             }
         }
 
-    RETURN_TYPES = ("STRING", "STRING","STRING", "STRING",)
-    RETURN_NAMES = ("novelai3", "ponyxl", "animagine", "illustrious")
+    RETURN_TYPES = ("STRING", "STRING","STRING", "STRING", "STRING", )
+    RETURN_NAMES = ("novelai3", "ponyxl", "animagine3.1", "animagine4.0", "illustrious")
     OUTPUT_NODE = True
     FUNCTION = "process_text"
     ALWAYS_EXECUTE = True
@@ -198,7 +222,6 @@ class PromptConverter:
                 if re.match(pattern, processed_tag["name"]):
                     processed_tag["type"] = -1
                     break
-                
             result.append(processed_tag)
 
         # 0 一般
@@ -213,10 +236,11 @@ class PromptConverter:
         # -4 レーティング
         # -5 年代
         sort_priority = {
-            "novelai3": [-1, 4, 3, 1, 5, 0, 9, -3, -4, -5],
+            "novelai3": [-1, 4, 3, 1, 5, 0, 9, -3, -2, -4, -5],
             "ponyxl": [-2, -3, -1, 4, 3, 1, 5, 0, 9, -4, -5],
-            "animagine": [-1, 4, 3, 5, 0, 9, 1, -3, -4, -5],
-            "illustrious": [-1, 4, 3, -4, 5, 0, 9, 1, -3, -5]
+            "animagine3.1": [-1, 4, 3, 5, 0, 9, 1, -3, -2, -4, -5],
+            "animagine4.0": [-1, 4, 3, 5, 0, 9, 1, -3, -2, -4, -5],
+            "illustrious": [-1, 4, 3, -4, 5, 0, 9, 1, -3, -2, -5]
         }[order]
 
         result2 = []
@@ -240,7 +264,7 @@ class PromptConverter:
                 tag["weight"] = 1.0
 
         prompts = []
-        for order, tag_format in [("novelai3", "danbooru"), ("ponyxl", "e621"), ("animagine", "danbooru"), ("illustrious", "danbooru")]:
+        for order, tag_format in [("novelai3", "danbooru"), ("ponyxl", "e621"), ("animagine3.1", "danbooru"), ("animagine4.0", "danbooru"), ("illustrious", "danbooru")]:
             taglist = taglist_orig.copy()
             if auto_quality_tags is True:
                 taglist.extend(self.auto_quality_tags[order])
@@ -258,11 +282,17 @@ class PromptConverter:
                     "questionable": [{"name": "rating_questionable", "weight": 1.0, "type": -4}],
                     "explicit": [{"name": "rating_explicit", "weight": 1.0, "type": -4}]
                 },
-                "animagine": {
+                "animagine3.1": {
                     "safe": [{"name": "general", "weight": 1.0, "type": -4}],
                     "sensitive": [{"name": "sensitive", "weight": 1.0, "type": -4}],
                     "questionable": [{"name": "nsfw", "weight": 1.0, "type": -4}],
                     "explicit": [{"name": "nsfw", "weight": 1.0, "type": -4}, {"name": "explicit", "weight": 1.0, "type": -4}]
+                },
+                "animagine4.0": {
+                    "safe": [{"name": "general", "weight": 1.0, "type": -4}],
+                    "sensitive": [{"name": "sensitive", "weight": 1.0, "type": -4}],
+                    "questionable": [{"name": "questionable", "weight": 1.0, "type": -4}],
+                    "explicit": [{"name": "explicit", "weight": 1.0, "type": -4}]
                 },
                 "illustrious": {
                     "safe": [{"name": "general", "weight": 1.0, "type": -4}],
@@ -328,8 +358,8 @@ class PromptConverterWithFilter(PromptConverter):
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "STRING",)
-    RETURN_NAMES = ("novelai3", "ponyxl", "animagine", "illustrious", "filtered")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "STRING", "STRING",)
+    RETURN_NAMES = ("novelai3", "ponyxl", "animagine3.1", "animagine4.0", "illustrious", "filtered")
     OUTPUT_NODE = True
     FUNCTION = "process_text_with_filter"
     ALWAYS_EXECUTE = True

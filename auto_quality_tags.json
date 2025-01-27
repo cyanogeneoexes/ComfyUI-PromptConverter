@@ -7,10 +7,16 @@
         {"name": "best quality", "weight": 1, "type": -3},
         {"name": "source_anime", "weight": 1, "type": 3}
     ],
-    "animagine": [
+    "animagine3.1": [
         {"name": "masterpiece", "weight": 1, "type": -3},
         {"name": "best_quality", "weight": 1, "type": -3},
         {"name": "very_aesthetic", "weight": 1, "type": -3},
+        {"name": "absurdres", "weight": 1, "type": -3}
+    ],
+    "animagine4.0": [
+        {"name": "masterpiece", "weight": 1, "type": -3},
+        {"name": "high_score", "weight": 1, "type": -2},
+        {"name": "great_score", "weight": 1, "type": -2},
         {"name": "absurdres", "weight": 1, "type": -3}
     ],
     "illustrious": [
