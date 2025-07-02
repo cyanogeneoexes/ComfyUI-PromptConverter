@@ -109,7 +109,8 @@ class PromptConverter:
                 "rating": (["safe", "sensitive", "questionable", "explicit"], {"default": "safe"}),
                 "unique": ("BOOLEAN", {"default": True}),
                 "auto_quality_tags": ("BOOLEAN", {"default": True}),
-                "remove_weights": ("BOOLEAN", {"default": False})
+                "remove_weights": ("BOOLEAN", {"default": False}),
+                "auto_sort_tags": ("BOOLEAN", {"default": False}), #　タグソートを使用しない
             },
             "optional": {
             }
@@ -250,7 +251,7 @@ class PromptConverter:
             result2.extend(l)
         return result2
 
-    def process_text(self, text="", unique=True, auto_quality_tags=True, remove_weights=False, rating="safe"):
+    def process_text(self, text="", unique=True, auto_quality_tags=True, auto_sort_tags =False, remove_weights=False, rating="safe"):
         # 空白を除去し、タグを分割
         tags = [x.strip().replace(" ", "_") for x in text.split(",") if x.strip()]
         # \でエスケープされているタグがあった場合はそれを取り除く
@@ -314,7 +315,8 @@ class PromptConverter:
                     taglist_names.append(x["name"])
                 taglist = taglist_uniq.copy()
 
-            taglist = self.sort_tags(taglist, order, tag_format)
+            if auto_sort_tags:
+                taglist = self.sort_tags(taglist, order, tag_format)
 
             if order.strip() != "novelai3":
                 for tag in taglist:
@@ -355,6 +357,7 @@ class PromptConverterWithFilter(PromptConverter):
                 "filter_quality": ("BOOLEAN", {"default": False}),     # クオリティタグを除外
                 "filter_rating": ("BOOLEAN", {"default": False}),      # レーティングタグを除外
                 "filter_generation": ("BOOLEAN", {"default": False}),  # 年代タグを除外
+                "auto_sort_tags": ("BOOLEAN", {"default": False}), #　タグソートを使用しない
             },
         }
 
@@ -371,12 +374,15 @@ class PromptConverterWithFilter(PromptConverter):
                                filter_other=False, filter_unknown=False,
                                filter_person=False, filter_score=False,
                                filter_quality=False, filter_rating=False,
-                               filter_generation=False):
+                               filter_generation=False, auto_sort_tags = False):
         original_sort_tags = self.sort_tags
         filtered_tags_list = []  # フィルタリングされたタグを保存するリスト
         
         def filtered_sort_tags(taglist, order, tag_format):
-            sorted_tags = original_sort_tags(taglist, order, tag_format)
+            if auto_sort_tags:
+                sorted_tags = original_sort_tags(taglist, order, tag_format)
+            else:
+                sorted_tags = taglist
             # フィルター条件を辞書で管理
             filters = {
                 0: filter_general,     # 一般
