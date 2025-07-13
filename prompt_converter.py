@@ -302,8 +302,8 @@ class PromptConverter:
                     "explicit": [{"name": "explicit", "weight": 1.0, "type": -4}]
                 }
             }[order][rating]
-
-            taglist.extend(rating_taglist)
+            if auto_quality_tags is True:
+                taglist.extend(rating_taglist)
 
             taglist_uniq = []
             if unique is True:
