@@ -4,6 +4,7 @@ from pathlib import Path
 import math
 import json
 import re
+import copy
 
 class PromptConverter:
     def __init__(self):
@@ -266,7 +267,7 @@ class PromptConverter:
 
         prompts = []
         for order, tag_format in [("novelai3", "danbooru"), ("ponyxl", "e621"), ("animagine3.1", "danbooru"), ("illustrious", "danbooru"), ("animagine4.0", "danbooru")]:
-            taglist = taglist_orig.copy()
+            taglist = copy.deepcopy(taglist_orig)
             if auto_quality_tags is True:
                 taglist.extend(self.auto_quality_tags[order])
 
@@ -320,6 +321,7 @@ class PromptConverter:
 
             if order.strip() != "novelai3":
                 for tag in taglist:
+                    oldtag = tag["name"]
                     tag["name"] = tag["name"].replace("(", "\\(").replace(")", "\\)")
 
             for tag in taglist:
